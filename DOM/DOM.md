@@ -384,8 +384,154 @@ Text 节点由 Text 类型表示，包含按字面解释的纯文本，也可能
  parentNode 值为 Element 对象；
  不支持子节点。
 
+Text 节点中的文本可以通过nodeValue属性访问，也可以通过data属性访问
+
+文本节点暴露了以下操作文本的方法：
+ appendData(text)，向节点末尾添加文本 text；
+ deleteData(offset, count)，从位置 offset 开始删除 count 个字符；
+ insertData(offset, text)，在位置 offset 插入 text；
+ replaceData(offset, count, text)，用 text 替换从位置 offset 到 offset + count 的
+文本；
+ splitText(offset)，在位置 offset 将当前文本节点拆分为两个文本节点；
+ substringData(offset, count)，提取从位置 offset 到 offset + count 的文本。
+除了这些方法，还可以通过 length 属性获取文本节点中包含的字符数量。这个值等于 nodeValue.
+length 和 data.length。
 
 
+`document.createTextNode()`可以用来创建新文本节点，它接收一个参数，即要插入节点的文本。
+有一个方法可以合并相邻的文本节点。这个方法
+叫 `normalize()`
 
 
+Text 类型定义了一个与 normalize()相反的方法——splitText()。
+这个方法可以在指定的偏移位置拆分 nodeValue
+拆分之后，原来的文本节点包含开头到偏移位置前的文本，
+新文本节点包含剩下的文本。这个方法返回新的文本节点，具有与原来的文本节点相同的 parentNode。
+
+      let element = document.createElement('div');
+      element.className = 'message';
+
+      let textNode = document.createTextNode('Hello world!');
+      element.appendChild(textNode);
+
+      document.body.appendChild(element);
+
+      let newNode = element.firstChild.splitText(5);
+      alert(element.firstChild.nodeValue); //"Hello"
+      alert(newNode.nodeValue); // " world!"
+      alert(element.childNodes.length); // 2
+常用于从文本节点中*提取数据*的 DOM 解析技术。
+
+
+###Comment 类型   ！not important to javascript
+
+DOM 中的注释通过 Comment 类型表示。Comment 类型的节点具有以下特征：
+ nodeType 等于 8；
+ nodeName 值为"#comment"；
+ nodeValue 值为注释的内容；
+ parentNode 值为 Document 或 Element 对象；
+ 不支持子节点。
+
+Comment 类型与 Text 类型继承同一个基类（CharacterData），因此拥有除 splitText()之外
+Text 节点所有的字符串操作方法。与 Text 类型相似，注释的实际内容可以通过 nodeValue 或 data
+属性获得。
+
+
+### CDATASection type
+
+CDATASection 类型继承 Text 类型，因此拥有包括 splitText()在内的所有字符串操作方法。
+CDATA 区块只在 XML 文档中有效，因此某些浏览器比较陈旧的版本会错误地将 CDATA 区块解析
+为 Comment 或 Element。比如下面这行代码：
+
+      <div id="myDiv"> <![CDATA[This is some content.]]> </div>
+      // some old edit will regard it as Comment or element like above
+
+###DocumentType 类型
+DocumentType 类型的节点包含文档的文档类型（doctype）信息，具有以下特征：
+ nodeType 等于 10；
+ nodeName 值为文档类型的名称；
+ nodeValue 值为 null；
+ parentNode 值为 Document 对象；
+ 不支持子节点。
+
+DOM Level 1 规定了
+DocumentType 对象的 3 个属性：name、entities 和 notations。其中，name 是文档类型的名称，
+entities 是这个文档类型描述的实体的 NamedNodeMap，而 notations 是这个文档类型描述的表示
+法的 NamedNodeMap。
+
+
+###DocumentFragment 类型 !important
+
+DOM 将
+文档片段定义为“轻量级”文档，能够包含和操作节点，却没有完整文档那样额外的消耗。
+DocumentFragment 节点具有以下特征：
+ nodeType 等于 11；
+ nodeName 值为"#document-fragment"；
+ nodeValue 值为 null；
+ parentNode 值为 null；
+ 子节点可以是 Element、ProcessingInstruction、Comment、Text、CDATASection 或
+EntityReference。
+
+不能直接把文档片段添加到文档。相反，**文档片段的作用是充当其他要被添加到文档的节点的仓库。**
+可以使用 document.createDocumentFragment()方法像下面这样创建文档片段：
+
+      let fragment = document.createDocumentFragment();
+
+文档片段从 Node 类型继承了所有文档类型具备的可以执行 DOM 操作的方法。
+
+如果文档中的一个节点被添加到一个文档片段，则该节点会从文档树中移除，不会再被浏览器渲染。
+添加到文档片段的新节点同样不属于文档树，不会被浏览器渲染。
+可以通过 appendChild()或 insertBefore()方法将文档片段的内容添加到文档。
+在把文档片段作为参数传给这些方法时，这个文档片段的所有子节点会被添加到文档中相应的位置。
+文档片段本身永远不会被添加到文档树。
+
+假设想给这个<ul>元素添加 3 个列表项。如果分 3 次给这个元素添加列表项，浏览器就要重新渲染
+3 次页面，以反映新添加的内容。*为避免多次渲染，下面的代码示例使用文档片段*创建了所有列表项，
+然后一次性将它们添加到了<ul>元素：
+
+      <ul id="myList"></ul>
+
+      let fragment = document.createDocumentFragment();
+      let ul = document.getElementById('ul');
+
+      for (let i = 0; i < 3; ++i) {
+         let li = document.creatElement('li');
+         li.appendChild(document.createTextNode(`Item ${i + 1}`));
+         fragment.appendChild(li);
+      }
+
+      ul.appendChild(fragment);
+
+### Attr 类型
+
+元素数据在 DOM 中通过 Attr 类型表示。Attr 类型构造函数和原型在所有浏览器中都可以直接访
+问。技术上讲，属性是存在于元素 attributes 属性中的节点。Attr 节点具有以下特征：
+ nodeType 等于 2；
+ nodeName 值为属性名；
+ nodeValue 值为属性值；
+ parentNode 值为 null；
+ 在 HTML 中不支持子节点；
+ 在 XML 中子节点可以是 Text 或 EntityReference。
+属性节点尽管是节点，却不被认为是 DOM 文档树的一部分。Attr 节点很少直接被引用，通常开
+发者更喜欢使用 getAttribute()、removeAttribute()和 setAttribute()方法操作属性。
+
+Attr 对象上有 3 个属性：name、value 和 specified。其中，name 包含属性名（与 nodeName
+一样），value 包含属性值（与 nodeValue 一样），而 specified 是一个布尔值，表示属性使用的是
+默认值还是被指定的值。
+
+可以使用 document.createAttribute()方法创建新的 Attr 节点，参数为属性名。比如，要给
+元素添加 align 属性，可以使用下列代码：
+
+      let attr = document.createAttribute("align");
+      attr.value = "left";
+      element.setAttributeNode(attr);
+      alert(element.attributes["align"].value); // "left"
+      alert(element.getAttributeNode("align").value); // "left"
+      alert(element.getAttribute("align")); // "left"
+
+---
+
+##DOM编程
+
+###动态脚本
 
